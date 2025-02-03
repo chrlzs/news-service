@@ -1,0 +1,24 @@
+{
+  "name": "news-service",
+  "version": "1.0.0",
+  "description": "This is the back-end service for my project. It provides APIs for fetching news and other data.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chrlzs/news-service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chrlzs/news-service/issues"
+  },
+  "homepage": "https://github.com/chrlzs/news-service#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
