@@ -12,7 +12,19 @@ app.use(cors());
 
 const apiKeys = process.env.API_KEYS ? process.env.API_KEYS.split(',') : [];
 
-console.log(apiKeys);
+// Middleware to validate API key
+const validateApiKey = (req, res, next) => {
+  const apiKey = req.headers["x-api-key"];
+
+  if (!apiKey || !apiKeys.has(apiKey)) {
+    return res.status(401).json({ error: "Unauthorized: Invalid API Key" });
+  }
+
+  next();
+};
+
+// Apply middleware globally
+app.use(validateApiKey);
 
 // Example news data
 const news = [
