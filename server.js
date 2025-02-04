@@ -1,8 +1,11 @@
+require('dotenv').config();
+
 const express = require("express");
 const cors = require("cors");
 
 const app = express();
-const PORT = 5000;
+const port = process.env.PORT || 1337;
+const newsApiKey = process.env.NEWSAPI_KEY;
 
 // Enable CORS
 app.use(cors());
@@ -27,6 +30,6 @@ app.get("/news", (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
