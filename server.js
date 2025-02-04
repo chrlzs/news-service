@@ -16,7 +16,7 @@ const apiKeys = process.env.API_KEYS ? process.env.API_KEYS.split(',') : [];
 const validateApiKey = (req, res, next) => {
   const apiKey = req.headers["x-api-key"];
 
-  if (!apiKey || !apiKeys.has(apiKey)) {
+  if (!apiKey || !apiKeys.includes(apiKey)) {
     return res.status(401).json({ error: "Unauthorized: Invalid API Key" });
   }
 
