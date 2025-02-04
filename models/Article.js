@@ -13,10 +13,14 @@ const Article = sequelize.define("Article", {
   url: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true, // Ensure no duplicate articles
+    unique: true,
   },
   publishedAt: {
     type: DataTypes.DATE,
+    allowNull: false,
+  },
+  country: {
+    type: DataTypes.STRING(2), // 2-letter country code
     allowNull: false,
   },
 });
