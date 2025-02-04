@@ -2,13 +2,25 @@ require('dotenv').config();
 
 const express = require("express");
 const cors = require("cors");
-
 const app = express();
 const port = process.env.PORT || 1337;
 const newsApiKey = process.env.NEWSAPI_KEY;
+const cron = require("node-cron");
+const { fetchNews } = require("./services/newsService");
+const Article = require("./models/Article");
+const sequelize = require("./config/database");
 
 // Enable CORS
 app.use(cors());
+
+// Sync database and fetch news on startup
+sequelize.sync().then(() => {
+    console.log("Database synced");
+    fetchNews();
+  });
+  
+  // Fetch news every hour
+cron.schedule("0 * * * *", fetchNews);
 
 const apiKeys = process.env.API_KEYS ? process.env.API_KEYS.split(',') : [];
 
@@ -26,24 +38,14 @@ const validateApiKey = (req, res, next) => {
 // Apply middleware globally
 app.use(validateApiKey);
 
-// Example news data
-const news = [
-  {
-    title: "Breaking News",
-    description: "This is a breaking news article.",
-    url: "https://example.com",
-  },
-  {
-    title: "Another News Article",
-    description: "This is another news article.",
-    url: "https://example.com",
-  },
-];
-
-// API endpoint to fetch news
-app.get("/news", (req, res) => {
-  res.json({ articles: news });
-});
+// Serve cached articles
+app.get("/news", async (req, res) => {
+    const articles = await Article.findAll({
+      order: [["publishedAt", "DESC"]],
+    });
+    res.json({ articles });
+  });
+  
 
 // Start the server
 app.listen(port, () => {
