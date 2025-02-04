@@ -13,6 +13,10 @@ const sequelize = require("./config/database");
 // Enable CORS
 app.use(cors());
 
+sequelize.sync({ alter: true }).then(() => {
+    console.log("Database synced");
+  });
+
 // Sync database and fetch news on startup
 sequelize.sync().then(() => {
     console.log("Database synced");
@@ -38,14 +42,22 @@ const validateApiKey = (req, res, next) => {
 // Apply middleware globally
 app.use(validateApiKey);
 
-// Serve cached articles
 app.get("/news", async (req, res) => {
     const articles = await Article.findAll({
       order: [["publishedAt", "DESC"]],
     });
-    res.json({ articles });
-  });
   
+    // Group articles by country
+    const groupedArticles = articles.reduce((acc, article) => {
+      if (!acc[article.country]) {
+        acc[article.country] = [];
+      }
+      acc[article.country].push(article);
+      return acc;
+    }, {});
+  
+    res.json({ articles: groupedArticles });
+  });
 
 // Start the server
 app.listen(port, () => {
