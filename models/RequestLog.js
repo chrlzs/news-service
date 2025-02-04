@@ -12,6 +12,10 @@ const RequestLog = sequelize.define("RequestLog", {
     allowNull: false,
     defaultValue: 0,
   },
+  lastRateLimitHit: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 });
 
 module.exports = RequestLog;
