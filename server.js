@@ -10,6 +10,10 @@ const newsApiKey = process.env.NEWSAPI_KEY;
 // Enable CORS
 app.use(cors());
 
+const apiKeys = process.env.API_KEYS ? process.env.API_KEYS.split(',') : [];
+
+console.log(apiKeys);
+
 // Example news data
 const news = [
   {
