@@ -37,8 +37,8 @@ sequelize.sync({ alter: true }).then(() => {
   }, 5000); // 5-second delay before first attempt
 });
 
-// Fetch news every 12 hours
-cron.schedule("0 */12 * * *", () => {
+// Fetch news every 24 hours
+cron.schedule("0 0 * * *", () => {
   attemptNewsFetch();
 });
 
