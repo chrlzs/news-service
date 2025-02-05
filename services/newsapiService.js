@@ -10,7 +10,7 @@ const countries = [
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-const fetchWithRetry = async (url, params, retries = 3, delayMs = 1000) => {
+const fetchWithRetry = async (url, params, retries = 3, delayMs = 10000) => {
   try {
     const response = await axios.get(url, { params });
     return response.data;
