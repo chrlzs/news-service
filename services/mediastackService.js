@@ -7,15 +7,17 @@ const countries = [
   "us", "gb", "ca", "au", "in", "cn", "jp", "fr", "de", "it", "es", "ru", "br", "mx", "za", "ng", "eg", "sa", "ae", "kr", "tr", "id", "my", "th", "vn", "ph", "sg", "nz", "ie", "nl", "be", "ch", "at", "se", "no", "fi", "dk", "pl", "cz", "hu", "gr", "pt", "ro", "il", "ua", "ar", "co", "ve", "cl", "pe", "ec", "bo", "py", "uy", "cr", "pa", "do", "hn", "sv", "ni", "gt", "pr", "cu", "jm", "ht", "bs", "bz", "tt", "gd", "lc", "vc", "kn", "ag", "dm", "bb", "sr", "gy", "gf", "mq", "gp", "re", "yt", "pm", "bl", "mf", "aw", "cw", "sx", "bq", "ai", "vg", "ky", "ms", "tc", "fk", "gf", "pf", "nc", "wf", "tf", "yt", "re", "gf", "pf", "nc", "wf", "tf"
 ];
 
-const fetchWithRetry = async (url, params, retries = 3, delay = 1000) => {
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const fetchWithRetry = async (url, params, retries = 3, delayMs = 1000) => {
   try {
     const response = await axios.get(url, { params });
     return response.data;
   } catch (error) {
     if (error.response && error.response.status === 429 && retries > 0) {
-      console.log(`Retrying in ${delay}ms...`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return fetchWithRetry(url, params, retries - 1, delay * 2);
+      console.log(`429 error encountered. Retrying in ${delayMs}ms...`);
+      await delay(delayMs);
+      return fetchWithRetry(url, params, retries - 1, delayMs * 2);
     }
     throw error;
   }
