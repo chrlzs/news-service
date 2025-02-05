@@ -32,35 +32,78 @@ sequelize.sync({ alter: true }).then(() => {
   console.log("Database synced");
 
   // Fetch news on startup with delay to avoid race conditions
-  setTimeout(async () => {
-    await fetchNewsWithRetry(fetchNewsFromNewsAPI, 3);
-    await fetchNewsWithRetry(fetchNewsFromMediaStack, 3);
-  }, 5000); // Delay startup fetch to avoid database lock
+  setTimeout(() => {
+    attemptNewsFetch();
+  }, 5000); // 5-second delay before first attempt
 });
 
-// Fetch news every 12 hours with retry logic
-cron.schedule("0 */12 * * *", async () => {
-  await fetchNewsWithRetry(fetchNewsFromNewsAPI, 3);
-  await fetchNewsWithRetry(fetchNewsFromMediaStack, 3);
+// Fetch news every 12 hours
+cron.schedule("0 */12 * * *", () => {
+  attemptNewsFetch();
 });
 
-// Exponential backoff retry for API requests
-async function fetchNewsWithRetry(fetchFunction, retries = 5, delay = 1000) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      await fetchFunction();
-      return; // Exit loop if successful
-    } catch (error) {
-      if (error.response?.status === 429) {
-        const retryAfter = error.response.headers['Retry-After'] || delay;
-        console.warn(`429 received, retrying after ${retryAfter * (i + 1)}ms...`);
-        await new Promise(resolve => setTimeout(resolve, retryAfter * (i + 1)));
-      } else {
-        console.error(`Fetch attempt ${i + 1} failed:`, error);
+// Function to attempt fetching news with retry and fallback logic
+async function attemptNewsFetch(retries = 3) {
+  const countries = ["us", "gb", "ca", "de", "fr"]; // Example country codes
+
+  console.log("Starting news fetch...");
+
+  for (const country of countries) {
+    let success = false;
+
+    for (let i = 0; i < retries; i++) {
+      try {
+        console.log(`Fetching news for ${country} (Attempt ${i + 1})...`);
+        
+        // Fetch news from both services for the specific country
+        await fetchNewsFromNewsAPI(country);
+        await fetchNewsFromMediaStack(country);
+
+        console.log(`News fetch successful for ${country}.`);
+        success = true;
+        break; // Exit retry loop if successful
+      } catch (error) {
+        console.error(`Fetch attempt ${i + 1} failed for ${country}:`, error);
+
+        if (error.response?.status === 429) {
+          const retryAfter = error.response.headers['Retry-After'] || (1000 * (i + 1));
+          console.warn(`429 received for ${country}, retrying after ${retryAfter}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryAfter));
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retrying
+        }
       }
     }
+
+    if (!success) {
+      console.error(`All retries failed for ${country}. Retrying in 24 hours.`);
+      setTimeout(() => attemptNewsFetchForCountry(country, retries), 24 * 60 * 60 * 1000);
+    }
   }
-  console.error("Max retries reached for fetch function:", fetchFunction.name);
+}
+
+// Function to retry a single country after 24-hour backoff
+async function attemptNewsFetchForCountry(country, retries = 3) {
+  console.log(`Reattempting news fetch for ${country} after backoff...`);
+  let success = false;
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      await fetchNewsFromNewsAPI(country);
+      await fetchNewsFromMediaStack(country);
+      console.log(`News fetch successful for ${country} after backoff.`);
+      success = true;
+      break;
+    } catch (error) {
+      console.error(`Retry attempt ${i + 1} failed for ${country}:`, error);
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Short delay before retry
+    }
+  }
+
+  if (!success) {
+    console.error(`All retries failed for ${country} again. Waiting another 24 hours.`);
+    setTimeout(() => attemptNewsFetchForCountry(country, retries), 24 * 60 * 60 * 1000);
+  }
 }
 
 // Serve cached articles
