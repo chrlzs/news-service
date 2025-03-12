@@ -1,4 +1,3 @@
-
 const axios = require("axios");
 const { Op } = require("sequelize");
 const Article = require("../models/Article");
@@ -25,6 +24,11 @@ const fetchWithRetry = async (url, params, retries = 3, delayMs = 10000) => {
 };
 
 const fetchNewsFromNewsAPI = async () => {
+  if (process.env.NODE_ENV === "development") {
+    const { fetchNewsFromNewsAPI } = require("./mockApiService");
+    return fetchNewsFromNewsAPI();
+  }
+
   const today = new Date().toISOString().split("T")[0];
 
   // Get or create today's request log
