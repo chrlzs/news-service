@@ -23,91 +23,96 @@ const fetchWithRetry = async (url, params, retries = 3, delayMs = 10000) => {
   }
 };
 
-const fetchNewsFromMediaStack = async () => {
-    const today = new Date().toISOString().split("T")[0];
+const fetchNewsFromMediaStack = async (country) => {
+  if (process.env.NODE_ENV === "development") {
+    const { fetchNewsFromMediaStack } = require("./mockApiService");
+    return fetchNewsFromMediaStack(country);
+  }
+
+  const today = new Date().toISOString().split("T")[0];
   
-    // Get or create today's request log
-    const [log] = await RequestLog.findOrCreate({
-      where: { date: today },
-      defaults: { count: 0 },
-    });
+  // Get or create today's request log
+  const [log] = await RequestLog.findOrCreate({
+    where: { date: today },
+    defaults: { count: 0 },
+  });
   
-    // Check if the rate limit was hit recently
-    if (log.lastRateLimitHit) {
-      const coolDownPeriod = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
-      const timeSinceLastRateLimit = new Date() - new Date(log.lastRateLimitHit);
+  // Check if the rate limit was hit recently
+  if (log.lastRateLimitHit) {
+    const coolDownPeriod = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+    const timeSinceLastRateLimit = new Date() - new Date(log.lastRateLimitHit);
   
-      if (timeSinceLastRateLimit < coolDownPeriod) {
-        console.log("Cool-down period active. Skipping fetch.");
-        return;
-      }
-    }
-  
-    if (log.count >= 500) {
-      console.log("Monthly request limit reached for MediaStack");
-      log.lastRateLimitHit = new Date(); // Record the time the rate limit was hit
-      await log.save();
+    if (timeSinceLastRateLimit < coolDownPeriod) {
+      console.log("Cool-down period active. Skipping fetch.");
       return;
     }
+  }
   
-    // Fetch news for each country
-    for (const country of countries) {
-      try {
-        // Check for cached articles
-        const cachedArticles = await Article.findAll({
-          where: {
+  if (log.count >= 500) {
+    console.log("Monthly request limit reached for MediaStack");
+    log.lastRateLimitHit = new Date(); // Record the time the rate limit was hit
+    await log.save();
+    return;
+  }
+  
+  // Fetch news for each country
+  for (const country of countries) {
+    try {
+      // Check for cached articles
+      const cachedArticles = await Article.findAll({
+        where: {
+          country: country,
+          publishedAt: {
+            [Op.gte]: new Date(new Date() - 24 * 60 * 60 * 1000),
+          },
+        },
+      });
+  
+      if (cachedArticles.length > 0) {
+        console.log(`Serving cached articles for ${country}`);
+        continue;
+      }
+  
+      // Fetch news from MediaStack with retry logic
+      const data = await fetchWithRetry("http://api.mediastack.com/v1/news", {
+        access_key: process.env.MEDIASTACK_API_KEY,
+        countries: country,
+        limit: 10,
+      });
+  
+      const articles = data.data;
+  
+      // Save articles to the database
+      for (const article of articles) {
+        await Article.findOrCreate({
+          where: { url: article.url },
+          defaults: {
+            title: article.title,
+            description: article.description,
+            url: article.url,
+            publishedAt: new Date(article.published_at),
             country: country,
-            publishedAt: {
-              [Op.gte]: new Date(new Date() - 24 * 60 * 60 * 1000),
-            },
+            source: "MediaStack",
           },
         });
-  
-        if (cachedArticles.length > 0) {
-          console.log(`Serving cached articles for ${country}`);
-          continue;
-        }
-  
-        // Fetch news from MediaStack with retry logic
-        const data = await fetchWithRetry("http://api.mediastack.com/v1/news", {
-          access_key: process.env.MEDIASTACK_API_KEY,
-          countries: country,
-          limit: 10,
-        });
-  
-        const articles = data.data;
-  
-        // Save articles to the database
-        for (const article of articles) {
-          await Article.findOrCreate({
-            where: { url: article.url },
-            defaults: {
-              title: article.title,
-              description: article.description,
-              url: article.url,
-              publishedAt: new Date(article.published_at),
-              country: country,
-              source: "MediaStack",
-            },
-          });
-        }
-  
-        console.log(`Fetched and saved articles from ${country}:`, articles.length);
-  
-        // Increment the request count
-        await log.increment("count");
-  
-        // Stop if the monthly limit is reached
-        if (log.count >= 500) {
-          console.log("Monthly request limit reached for MediaStack");
-          log.lastRateLimitHit = new Date(); // Record the time the rate limit was hit
-          await log.save();
-          break;
-        }
-      } catch (error) {
-        console.error(`Error fetching news for ${country}:`, error.message);
       }
+  
+      console.log(`Fetched and saved articles from ${country}:`, articles.length);
+  
+      // Increment the request count
+      await log.increment("count");
+  
+      // Stop if the monthly limit is reached
+      if (log.count >= 500) {
+        console.log("Monthly request limit reached for MediaStack");
+        log.lastRateLimitHit = new Date(); // Record the time the rate limit was hit
+        await log.save();
+        break;
+      }
+    } catch (error) {
+      console.error(`Error fetching news for ${country}:`, error.message);
     }
-  };
+  }
+};
 
 module.exports = { fetchNewsFromMediaStack };
