@@ -29,7 +29,7 @@ app.use(validateApiKey);
 
 // Ensure a single database sync
 sequelize.sync({ alter: true }).then(() => {
-  console.log("Database synced");
+  //console.log("Database synced");
 
   // Fetch news on startup with delay to avoid race conditions
   setTimeout(() => {
@@ -46,24 +46,24 @@ cron.schedule("0 0 * * *", () => {
 async function attemptNewsFetch(retries = 3) {
   const countries = ["us", "gb", "ca", "de", "fr"]; // Example country codes
 
-  console.log("Starting news fetch...");
+  //console.log("Starting news fetch...");
 
   for (const country of countries) {
     let success = false;
 
     for (let i = 0; i < retries; i++) {
       try {
-        console.log(`Fetching news for ${country} (Attempt ${i + 1})...`);
+        //console.log(`Fetching news for ${country} (Attempt ${i + 1})...`);
         
         // Fetch news from both services for the specific country
         await fetchNewsFromNewsAPI(country);
         await fetchNewsFromMediaStack(country);
 
-        console.log(`News fetch successful for ${country}.`);
+        //console.log(`News fetch successful for ${country}.`);
         success = true;
         break; // Exit retry loop if successful
       } catch (error) {
-        console.error(`Fetch attempt ${i + 1} failed for ${country}:`, error);
+        //console.error(`Fetch attempt ${i + 1} failed for ${country}:`, error);
 
         if (error.response?.status === 429) {
           const retryAfter = error.response.headers['Retry-After'] || (1000 * (i + 1));
