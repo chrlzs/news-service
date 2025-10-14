@@ -1,4 +1,4 @@
-# News Service
+# Simple News Service
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -52,4 +52,5 @@ curl http://localhost:3000/news?keyword=technology
 
 ## License
 This project is licensed under the MIT License.
+
 
